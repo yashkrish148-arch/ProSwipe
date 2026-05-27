@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProSwipe — Skill Tests</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .skill-category-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:28px;}
+    .skill-cat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 16px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden;}
+    .skill-cat-card::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity 0.2s;}
+    .skill-cat-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.2);}
+    .skill-cat-card.passed{border-color:rgba(16,185,129,0.3);background:rgba(16,185,129,0.04);}
+    .skill-cat-card.failed{border-color:rgba(239,68,68,0.2);}
+    .scc-icon{font-size:2.2rem;margin-bottom:10px;}
+    .scc-name{font-family:'Syne',sans-serif;font-size:0.95rem;font-weight:800;color:var(--text);}
+    .scc-meta{font-size:0.72rem;color:var(--text3);margin-top:4px;}
+    .scc-badge{margin-top:8px;}
+    .test-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:24px;flex-wrap:wrap;}
+    .timer-widget{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 24px;text-align:center;flex-shrink:0;}
+    .timer-label{font-size:0.7rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;}
+    .progress-header{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xs);padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px;}
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/pages/swipe.html" class="navbar-brand"><div class="brand-mark">👔</div><span class="brand-name">ProSwipe</span></a>
+    <div class="navbar-links">
+      <a href="/pages/swipe.html">Discover</a>
+      <a href="/pages/dashboard.html">Dashboard</a>
+      <a href="/pages/skills.html" class="active">Skill Tests</a>
+      <a href="/pages/resume.html">Resume</a>
+    </div>
+    <div class="navbar-right">
+      <div class="nav-user-chip"><div class="nav-avatar" id="navAvatar">J</div><span class="nav-username" id="navUser"></span></div>
+      <button class="btn-nav-logout" onclick="logout()">Sign out</button>
+    </div>
+  </nav>
+
+  <aside class="sidebar">
+    <div class="sidebar-label">Navigation</div>
+    <a href="/pages/swipe.html" class="sidebar-item"><span class="sidebar-icon">🔍</span> Discover Jobs</a>
+    <a href="/pages/dashboard.html" class="sidebar-item"><span class="sidebar-icon">📊</span> My Dashboard</a>
+    <a href="/pages/skills.html" class="sidebar-item active"><span class="sidebar-icon">🧪</span> Skill Tests</a>
+    <a href="/pages/resume.html" class="sidebar-item"><span class="sidebar-icon">📄</span> Resume Builder</a>
+  </aside>
+
+  <div class="main-content">
+
+    <!-- CATEGORY VIEW -->
+    <div id="viewCats">
+      <div class="page-header"><div class="page-title">Skill Verification Tests</div><div class="page-subtitle">Pass a test (≥70%) to earn a verified badge and add the skill to your profile</div></div>
+      <div style="background:rgba(79,110,247,0.06);border:1px solid rgba(79,110,247,0.15);border-radius:var(--radius);padding:14px 18px;margin-bottom:24px;font-size:0.875rem;color:var(--text2);">
+        <strong style="color:var(--primary);">How it works:</strong> Each test has <strong>12 random MCQs</strong> with a <strong>20-minute timer</strong>. Score ≥70% to get the skill verified and auto-added to your profile. Failed tests can be retaken after <strong>24 hours</strong>.
+      </div>
+      <div class="skill-category-grid" id="catGrid"><div class="loading-center"><div class="spinner"></div></div></div>
+      <div class="card">
+        <div class="card-title">Test History</div>
+        <div id="testHistoryTable"><div class="loading-center"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- TEST VIEW -->
+    <div id="viewTest" style="display:none;">
+      <div class="test-header">
+        <div>
+          <div class="page-title" id="testTitle">Test</div>
+          <div class="page-subtitle" id="testSub">Answer all questions before time runs out</div>
+        </div>
+        <div class="timer-widget">
+          <div class="timer-label">Time Remaining</div>
+          <div class="test-timer" id="timerDisplay">20:00</div>
+        </div>
+      </div>
+      <div style="max-width:720px;">
+        <div class="progress-header">
+          <div style="flex:1;background:var(--surface3);border-radius:99px;height:6px;overflow:hidden;">
+            <div id="progressFill" style="height:100%;background:linear-gradient(90deg,var(--primary),var(--teal));border-radius:99px;transition:width .3s;width:0%"></div>
+          </div>
+          <span id="progressText" style="font-size:0.8rem;font-weight:700;color:var(--text2);white-space:nowrap;min-width:56px;text-align:right;">0 / 0</span>
+        </div>
+        <div id="questionsWrap"></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+          <button class="btn btn-primary btn-lg" onclick="submitTest()" id="submitBtn" disabled>Submit Test</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULT VIEW -->
+    <div id="viewResult" style="display:none;">
+      <div class="page-title" style="margin-bottom:24px;">Test Result</div>
+      <div style="max-width:480px;margin:0 auto;">
+        <div class="card" style="padding:40px;text-align:center;">
+          <div class="score-ring" id="scoreRing">
+            <div style="font-family:'Syne',sans-serif;font-size:2.4rem;font-weight:800;" id="scoreNum">0</div>
+            <div style="font-size:0.7rem;font-weight:600;color:var(--text3);">out of 100</div>
+          </div>
+          <div style="font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;color:var(--text);margin-bottom:8px;" id="resultTitle"></div>
+          <p style="color:var(--text2);font-size:0.875rem;margin-bottom:24px;line-height:1.6;" id="resultMsg"></p>
+          <div style="display:flex;gap:12px;justify-content:center;margin-bottom:24px;" id="resultStats"></div>
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+            <button class="btn btn-ghost" onclick="backToCats()">← Back to Tests</button>
+            <a href="/pages/dashboard.html" class="btn btn-primary">View Dashboard →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    const BASE='http://localhost:8080';
+    const userId=localStorage.getItem('userId');
+    const userName=localStorage.getItem('userName');
+    const userRole=localStorage.getItem('userRole');
+    if(!userId){location.href='/index.html';}
+    if(userRole==='recruiter'){location.href='/pages/admin.html';}
+    document.getElementById('navUser').textContent=userName;
+    document.getElementById('navAvatar').textContent=(userName||'U')[0].toUpperCase();
+
+    let curQuestions=[],userAnswers=[],timerInt=null,curSkill='';
+    function logout(){localStorage.clear();location.href='/index.html';}
+    function toast(msg,type=''){const tc=document.getElementById('toastContainer');const t=document.createElement('div');t.className=`toast ${type}`;t.textContent=msg;tc.appendChild(t);setTimeout(()=>t.remove(),4000);}
+
+    const skillMeta={
+      java:{icon:'☕',color:'#F97316'},python:{icon:'🐍',color:'#3B82F6'},
+      sql:{icon:'🗄️',color:'#8B5CF6'},'spring boot':{icon:'🍃',color:'#10B981'},
+      javascript:{icon:'⚡',color:'#F59E0B'},react:{icon:'⚛️',color:'#06B6D4'}
+    };
+
+    async function loadCategories(){
+      try{
+        const[cR,tR]=await Promise.all([fetch(`${BASE}/api/skills/categories`),fetch(`${BASE}/api/skills/tests/${userId}`)]);
+        const cats=await cR.json(); const tests=await tR.json();
+        const latestBySkill={};
+        tests.forEach(t=>{if(!latestBySkill[t.skillName]||new Date(t.testDate)>new Date(latestBySkill[t.skillName].testDate))latestBySkill[t.skillName]=t;});
+        const grid=document.getElementById('catGrid');
+        grid.innerHTML=cats.map(cat=>{
+          const key=cat.toLowerCase();const m=skillMeta[key]||{icon:'🎯',color:'var(--primary)'};
+          const latest=latestBySkill[cat];
+          const statusClass=latest?.passed?'passed':latest&&!latest.passed?'failed':'';
+          const badge=latest?.passed?`<div class="scc-badge"><span class="badge badge-verified">✅ Verified</span></div>`:latest&&!latest.passed?`<div class="scc-badge"><span class="badge badge-rejected">❌ Failed — retry in 24h</span></div>`:'';
+          return `<div class="skill-cat-card ${statusClass}" onclick="startTest('${cat}')" style="border-top:3px solid ${m.color}20;">
+            <div class="scc-icon">${m.icon}</div>
+            <div class="scc-name">${cat}</div>
+            <div class="scc-meta">12 questions • 20 min</div>
+            ${badge}
+          </div>`;
+        }).join('');
+        renderHistory(tests);
+      }catch(e){document.getElementById('catGrid').innerHTML='<div class="empty-state"><p>Failed to load</p></div>';}
+    }
+
+    function renderHistory(tests){
+      const el=document.getElementById('testHistoryTable');
+      if(!tests.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">📋</div><h3>No tests yet</h3><p>Pick a skill above to get started</p></div>';return;}
+      const sorted=[...tests].sort((a,b)=>new Date(b.testDate)-new Date(a.testDate));
+      el.innerHTML=`<table class="table"><thead><tr><th>Skill</th><th>Score</th><th>Result</th><th>Date & Time</th></tr></thead><tbody>${sorted.map(t=>`<tr>
+        <td><strong style="color:var(--text);">${t.skillName}</strong></td>
+        <td><span style="font-weight:700;color:${t.passed?'var(--green)':'var(--red)'};">${t.score}%</span></td>
+        <td><span class="badge ${t.passed?'badge-verified':'badge-rejected'}">${t.passed?'✅ Passed':'❌ Failed'}</span></td>
+        <td style="color:var(--text2);">${new Date(t.testDate).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</td>
+      </tr>`).join('')}</tbody></table>`;
+    }
+
+    async function startTest(skillName){
+      try{
+        const r=await fetch(`${BASE}/api/skills/questions/${encodeURIComponent(skillName)}?seekerId=${userId}`);
+        const data=await r.json();
+        if(!r.ok){
+          if(data.alreadyPassed){toast(`${skillName} is already verified! ✅`,'success');return;}
+          toast(data.error||'Cannot start test','error');return;
+        }
+        curSkill=skillName;curQuestions=data.questions;
+        userAnswers=new Array(curQuestions.length).fill(-1);
+        const m=skillMeta[skillName.toLowerCase()]||{icon:'🎯'};
+        document.getElementById('viewCats').style.display='none';
+        document.getElementById('viewTest').style.display='block';
+        document.getElementById('testTitle').textContent=`${m.icon} ${skillName} Test`;
+        document.getElementById('testSub').textContent=`${curQuestions.length} questions • Score ≥70% to earn verified badge`;
+        renderQuestions();startTimer(20*60);
+      }catch(e){toast('Server error','error');}
+    }
+
+    function renderQuestions(){
+      document.getElementById('questionsWrap').innerHTML=curQuestions.map((q,qi)=>`
+        <div class="question-card" id="qc-${qi}">
+          <div class="question-text">Q${qi+1}. ${q.question}</div>
+          ${q.options.map((opt,oi)=>`<button class="option-btn" id="opt-${qi}-${oi}" onclick="selectAnswer(${qi},${oi})"><span style="font-weight:700;margin-right:8px;">${String.fromCharCode(65+oi)}.</span>${opt}</button>`).join('')}
+        </div>`).join('');
+      updateProgress();
+    }
+
+    function selectAnswer(qi,oi){
+      userAnswers[qi]=oi;
+      curQuestions[qi].options.forEach((_,i)=>document.getElementById(`opt-${qi}-${i}`)?.classList.remove('selected'));
+      document.getElementById(`opt-${qi}-${oi}`)?.classList.add('selected');
+      updateProgress();
+    }
+
+    function updateProgress(){
+      const answered=userAnswers.filter(a=>a!==-1).length;
+      const total=curQuestions.length;
+      document.getElementById('progressFill').style.width=(answered/total*100)+'%';
+      document.getElementById('progressText').textContent=`${answered} / ${total}`;
+      document.getElementById('submitBtn').disabled=answered<total;
+    }
+
+    function startTimer(secs){
+      let rem=secs;
+      const disp=document.getElementById('timerDisplay');
+      function tick(){const m=Math.floor(rem/60),s=rem%60;disp.textContent=`${m}:${s.toString().padStart(2,'0')}`;disp.className=`test-timer${rem<=120?' urgent':''}`;if(rem<=0){clearInterval(timerInt);toast('Time is up! Submitting…','error');submitTest();return;}rem--;}
+      tick();timerInt=setInterval(tick,1000);
+    }
+
+    async function submitTest(){
+      clearInterval(timerInt);document.getElementById('submitBtn').disabled=true;
+      try{
+        const r=await fetch(`${BASE}/api/skills/submit`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({seekerId:userId,skillName:curSkill,answers:userAnswers,questions:curQuestions.map(q=>q.question)})});
+        const data=await r.json();showResult(data);
+      }catch(e){toast('Submission failed','error');}
+    }
+
+    function showResult(data){
+      document.getElementById('viewTest').style.display='none';
+      document.getElementById('viewResult').style.display='block';
+      const ring=document.getElementById('scoreRing');
+      ring.className=`score-ring ${data.passed?'pass':'fail'}`;
+      document.getElementById('scoreNum').textContent=data.score;
+      document.getElementById('resultTitle').textContent=data.passed?'🎉 Skill Verified!':'😔 Not Passed';
+      document.getElementById('resultMsg').textContent=data.message;
+      document.getElementById('resultStats').innerHTML=`
+        <div style="background:var(--surface2);padding:14px 20px;border-radius:var(--radius-xs);text-align:center;">
+          <div style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:var(--green);">${data.correct}</div>
+          <div style="font-size:0.72rem;color:var(--text3);font-weight:600;">Correct</div>
+        </div>
+        <div style="background:var(--surface2);padding:14px 20px;border-radius:var(--radius-xs);text-align:center;">
+          <div style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:var(--red);">${data.total-data.correct}</div>
+          <div style="font-size:0.72rem;color:var(--text3);font-weight:600;">Incorrect</div>
+        </div>
+        <div style="background:var(--surface2);padding:14px 20px;border-radius:var(--radius-xs);text-align:center;">
+          <div style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:var(--primary);">${data.score}%</div>
+          <div style="font-size:0.72rem;color:var(--text3);font-weight:600;">Score</div>
+        </div>`;
+      if(data.passed){
+        const ex=(localStorage.getItem('userSkills')||'').split(',').map(s=>s.trim()).filter(Boolean);
+        if(!ex.some(s=>s.toLowerCase()===curSkill.toLowerCase())){ex.push(curSkill);localStorage.setItem('userSkills',ex.join(', '));}
+        toast(`🎉 ${curSkill} added to your profile!`,'success');
+      }
+    }
+
+    function backToCats(){
+      document.getElementById('viewResult').style.display='none';
+      document.getElementById('viewTest').style.display='none';
+      document.getElementById('viewCats').style.display='block';
+      loadCategories();
+    }
+
+    loadCategories();
+  </script>
+</body>
+</html>

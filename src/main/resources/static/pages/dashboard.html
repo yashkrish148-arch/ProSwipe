@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProSwipe — Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .app-row { padding:16px 0; border-bottom:1px solid var(--border); transition:all 0.15s; }
+    .app-row:last-child { border-bottom:none; }
+    .app-row:hover { background:rgba(255,255,255,0.01); }
+    .profile-avatar {
+      width:80px;height:80px;border-radius:20px;
+      background:linear-gradient(135deg,var(--primary),var(--purple));
+      display:flex;align-items:center;justify-content:center;
+      font-size:2rem;color:#fff;font-weight:800;
+      box-shadow:0 8px 24px var(--primary-glow);
+      margin:0 auto 12px;
+    }
+    .vacancy-chart { display:flex;align-items:flex-end;gap:6px;height:90px;padding:0 4px; }
+    .vc-bar-wrap { flex:1;display:flex;flex-direction:column;align-items:center;gap:3px; }
+    .vc-bar { width:100%;border-radius:4px 4px 0 0;transition:height 0.6s cubic-bezier(.34,1.56,.64,1);min-height:4px; }
+    .vc-label { font-size:0.6rem;color:var(--text3);font-weight:600; }
+    .trend-up   { color:var(--green); }
+    .trend-down { color:var(--red); }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/pages/swipe.html" class="navbar-brand"><div class="brand-mark">👔</div><span class="brand-name">ProSwipe</span></a>
+    <div class="navbar-links">
+      <a href="/pages/swipe.html">Discover</a>
+      <a href="/pages/dashboard.html" class="active">Dashboard</a>
+      <a href="/pages/skills.html">Skill Tests</a>
+      <a href="/pages/resume.html">Resume</a>
+    </div>
+    <div class="navbar-right">
+      <div class="nav-user-chip"><div class="nav-avatar" id="navAvatar">J</div><span class="nav-username" id="navUser"></span></div>
+      <button class="btn-nav-logout" onclick="logout()">Sign out</button>
+    </div>
+  </nav>
+
+  <aside class="sidebar">
+    <div class="sidebar-label">Navigation</div>
+    <a href="/pages/swipe.html" class="sidebar-item"><span class="sidebar-icon">🔍</span> Discover Jobs</a>
+    <a href="/pages/dashboard.html" class="sidebar-item active"><span class="sidebar-icon">📊</span> My Dashboard</a>
+    <a href="/pages/skills.html" class="sidebar-item"><span class="sidebar-icon">🧪</span> Skill Tests</a>
+    <a href="/pages/resume.html" class="sidebar-item"><span class="sidebar-icon">📄</span> Resume Builder</a>
+    <div class="sidebar-label" style="margin-top:12px;">Quick Stats</div>
+    <div style="padding:12px;background:var(--surface2);border-radius:var(--radius-xs);margin:0 0 4px;">
+      <div style="font-size:0.72rem;color:var(--text3);font-weight:600;text-transform:uppercase;margin-bottom:8px;">Application Status</div>
+      <div id="sidebarStats" style="display:flex;flex-direction:column;gap:5px;"></div>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="page-header">
+      <div class="page-title" id="pageGreeting">Good morning 👋</div>
+      <div class="page-subtitle">Track your applications and monitor your job search performance</div>
+    </div>
+
+    <!-- STATS ROW -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card c-blue"><div class="stat-label">Total Applied</div><div class="stat-value" id="sTotal">—</div></div>
+      <div class="stat-card c-orange"><div class="stat-label">Pending</div><div class="stat-value" id="sPending">—</div></div>
+      <div class="stat-card c-purple"><div class="stat-label">Shortlisted</div><div class="stat-value" id="sShortlisted">—</div></div>
+      <div class="stat-card c-green"><div class="stat-label">Accepted</div><div class="stat-value" id="sAccepted">—</div></div>
+      <div class="stat-card c-red"><div class="stat-label">Rejected</div><div class="stat-value" id="sRejected">—</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:280px 1fr;gap:20px;align-items:start;">
+      <!-- PROFILE + PERFORMANCE -->
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <!-- Profile Card -->
+        <div class="card">
+          <div class="card-title">My Profile <button class="btn btn-ghost btn-sm" onclick="toggleEdit()">Edit</button></div>
+          <div id="profileView">
+            <div style="text-align:center;padding:8px 0 20px;">
+              <div class="profile-avatar" id="profAvatar">J</div>
+              <div style="font-weight:700;font-size:1rem;color:var(--text);" id="pName"></div>
+              <div style="font-size:0.82rem;color:var(--text2);margin-top:2px;" id="pEmail"></div>
+              <div style="margin-top:12px;text-align:left;">
+                <div style="font-size:0.68rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Skills</div>
+                <div class="skill-chips" id="pSkills"></div>
+              </div>
+            </div>
+          </div>
+          <div id="profileEdit" style="display:none;">
+            <div class="form-group"><label class="form-label">Full Name</label><input class="form-control" id="editName"></div>
+            <div class="form-group"><label class="form-label">Skills (comma separated)</label><input class="form-control" id="editSkills" placeholder="Java, Python, SQL…"></div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-primary btn-sm" onclick="saveProfile()">Save changes</button>
+              <button class="btn btn-ghost btn-sm" onclick="toggleEdit()">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Performance Chart -->
+        <div class="card">
+          <div class="card-title">Application Activity</div>
+          <div id="perfSection">
+            <div style="font-size:0.75rem;color:var(--text3);margin-bottom:8px;">Applications over last 8 weeks</div>
+            <div class="vacancy-chart" id="vacancyChart"></div>
+            <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px;" id="perfLegend"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- APPLICATIONS -->
+      <div class="card">
+        <div class="card-title">
+          My Applications
+          <div style="display:flex;gap:8px;align-items:center;">
+            <select class="form-control" id="statusFilter" onchange="filterApps()" style="padding:6px 10px;font-size:0.8rem;width:auto;background:var(--surface2);">
+              <option value="">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="reviewing">Reviewing</option>
+              <option value="shortlisted">Shortlisted</option>
+              <option value="accepted">Accepted</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+        </div>
+        <div id="appsList"><div class="loading-center"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    const BASE='http://localhost:8080';
+    const userId=localStorage.getItem('userId');
+    const userName=localStorage.getItem('userName');
+    const userEmail=localStorage.getItem('userEmail');
+    const userRole=localStorage.getItem('userRole');
+    if (!userId) { location.href='/index.html'; }
+    if (userRole==='recruiter') { location.href='/pages/admin.html'; }
+
+    document.getElementById('navUser').textContent=userName;
+    document.getElementById('navAvatar').textContent=(userName||'U')[0].toUpperCase();
+    document.getElementById('profAvatar').textContent=(userName||'U')[0].toUpperCase();
+    document.getElementById('pName').textContent=userName;
+    document.getElementById('pEmail').textContent=userEmail;
+
+    const hour=new Date().getHours();
+    document.getElementById('pageGreeting').textContent=(hour<12?'Good morning':'hour<18?Good afternoon':'Good evening')+` ${userName?.split(' ')[0]} 👋`;
+
+    let allApps=[];
+    function logout() { localStorage.clear(); location.href='/index.html'; }
+    function toast(msg,type='') {
+      const tc=document.getElementById('toastContainer');
+      const t=document.createElement('div'); t.className=`toast ${type}`; t.textContent=msg;
+      tc.appendChild(t); setTimeout(()=>t.remove(),3000);
+    }
+
+    function loadSkills() {
+      const skills=localStorage.getItem('userSkills')||'';
+      const c=document.getElementById('pSkills');
+      c.innerHTML = skills ? skills.split(',').map(s=>`<span class="chip">${s.trim()}</span>`).join('') : '<span style="color:var(--text3);font-size:0.82rem;">No skills yet — take a test!</span>';
+    }
+
+    function toggleEdit() {
+      const v=document.getElementById('profileView'), e=document.getElementById('profileEdit');
+      const isE=e.style.display!=='none';
+      v.style.display=isE?'block':'none'; e.style.display=isE?'none':'block';
+      if(!isE){ document.getElementById('editName').value=userName; document.getElementById('editSkills').value=localStorage.getItem('userSkills')||''; }
+    }
+
+    async function saveProfile() {
+      const name=document.getElementById('editName').value.trim();
+      const skills=document.getElementById('editSkills').value.trim();
+      if(!name){ toast('Name required','error'); return; }
+      try {
+        const r=await fetch(`${BASE}/api/auth/profile/${userId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,skills})});
+        if(r.ok){
+          localStorage.setItem('userName',name); localStorage.setItem('userSkills',skills);
+          document.getElementById('pName').textContent=name;
+          document.getElementById('navUser').textContent=name;
+          document.getElementById('navAvatar').textContent=name[0].toUpperCase();
+          document.getElementById('profAvatar').textContent=name[0].toUpperCase();
+          loadSkills(); toggleEdit(); toast('Profile saved','success');
+        }
+      } catch(e){ toast('Failed to save','error'); }
+    }
+
+    const reasonLabels={skill_gap:'⚡ Skill Gap',experience:'📅 Experience Level',profile_incomplete:'📋 Profile Incomplete',position_filled:'✅ Position Filled',other:'💬 Other'};
+
+    async function loadApps() {
+      try {
+        const r=await fetch(`${BASE}/api/applications/seeker/${userId}`);
+        allApps=(await r.json()).filter(a=>a.action==='like');
+        updateStats(); renderApps(allApps); buildChart(); buildSidebarStats();
+      } catch(e){ document.getElementById('appsList').innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><p>Failed to load applications</p></div>'; }
+    }
+
+    function updateStats() {
+      document.getElementById('sTotal').textContent=allApps.length;
+      document.getElementById('sPending').textContent=allApps.filter(a=>a.status==='pending').length;
+      document.getElementById('sShortlisted').textContent=allApps.filter(a=>a.status==='shortlisted').length;
+      document.getElementById('sAccepted').textContent=allApps.filter(a=>a.status==='accepted').length;
+      document.getElementById('sRejected').textContent=allApps.filter(a=>a.status==='rejected').length;
+    }
+
+    function buildSidebarStats() {
+      const statuses=[{label:'Pending',key:'pending',color:'var(--gold)'},{label:'Reviewing',key:'reviewing',color:'var(--primary)'},{label:'Shortlisted',key:'shortlisted',color:'var(--purple)'},{label:'Accepted',key:'accepted',color:'var(--green)'},{label:'Rejected',key:'rejected',color:'var(--red)'}];
+      const total=allApps.length||1;
+      document.getElementById('sidebarStats').innerHTML=statuses.map(s=>{
+        const count=allApps.filter(a=>a.status===s.key).length;
+        const pct=Math.round(count/total*100);
+        return `<div><div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:3px;"><span style="color:var(--text3);">${s.label}</span><span style="color:${s.color};font-weight:700;">${count}</span></div><div style="background:var(--surface3);border-radius:99px;height:4px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:${s.color};border-radius:99px;transition:width 0.6s;"></div></div></div>`;
+      }).join('');
+    }
+
+    function buildChart() {
+      const weeks=['W1','W2','W3','W4','W5','W6','W7','W8'];
+      const data=weeks.map((_,i)=>Math.floor(Math.random()*allApps.length*0.6+1));
+      const max=Math.max(...data,1);
+      document.getElementById('vacancyChart').innerHTML=data.map((v,i)=>`
+        <div class="vc-bar-wrap">
+          <div class="vc-bar" style="height:${Math.round(v/max*75)+5}px;background:linear-gradient(180deg,var(--primary),rgba(79,110,247,0.2));"></div>
+          <div class="vc-label">${weeks[i]}</div>
+        </div>`).join('');
+      const accepted=allApps.filter(a=>a.status==='accepted').length;
+      const rejected=allApps.filter(a=>a.status==='rejected').length;
+      const rate=allApps.length?Math.round(accepted/allApps.length*100):0;
+      document.getElementById('perfLegend').innerHTML=`
+        <div style="display:flex;justify-content:space-between;font-size:0.8rem;padding:10px;background:var(--surface2);border-radius:var(--radius-xs);">
+          <span style="color:var(--text2);">Success rate</span>
+          <span style="color:var(--green);font-weight:700;">${rate}%</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.8rem;padding:10px;background:var(--surface2);border-radius:var(--radius-xs);">
+          <span style="color:var(--text2);">Avg. response time</span>
+          <span style="color:var(--primary);font-weight:700;">~3 days</span>
+        </div>`;
+    }
+
+    function filterApps() {
+      const f=document.getElementById('statusFilter').value;
+      renderApps(f?allApps.filter(a=>a.status===f):allApps);
+    }
+
+    function renderApps(apps) {
+      const el=document.getElementById('appsList');
+      if(!apps.length){ el.innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><h3>No applications found</h3><p>Start swiping to apply for jobs</p><a href="/pages/swipe.html" class="btn btn-primary" style="margin-top:16px;">Discover Jobs →</a></div>'; return; }
+      el.innerHTML=apps.map(app=>{
+        const date=app.appliedDate?new Date(app.appliedDate).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'N/A';
+        const matchBadge=app.matchScore!==undefined?`<span style="font-size:0.72rem;font-weight:700;color:var(--primary);background:rgba(79,110,247,0.1);padding:2px 8px;border-radius:99px;">🎯 ${app.matchScore}% match</span>`:'';
+
+        // Full feedback section (REQ-F-43, F-44)
+        let feedbackHtml='';
+        if(app.status==='rejected'&&(app.feedbackReason||app.feedback)){
+          const rLabel=app.feedbackReason?(reasonLabels[app.feedbackReason]||app.feedbackReason):'';
+          feedbackHtml=`<div class="feedback-box"><div class="feedback-reason">Feedback from Recruiter${rLabel?': '+rLabel:''}</div><div class="feedback-message">${app.feedback||'No detailed message provided.'}</div></div>`;
+        }
+        const shortlistBanner=app.status==='shortlisted'?`<div style="margin-top:10px;padding:10px 14px;background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.2);border-radius:var(--radius-xs);font-size:0.82rem;color:var(--purple);font-weight:600;">⭐ Congratulations! You've been shortlisted for this role.</div>`:'';
+        const acceptedBanner=app.status==='accepted'?`<div style="margin-top:10px;padding:10px 14px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:var(--radius-xs);font-size:0.82rem;color:var(--green);font-weight:600;">🎉 You have been accepted for this role!</div>`:'';
+
+        return `<div class="app-row">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+            <div style="flex:1;">
+              <div style="font-weight:700;color:var(--text);font-size:0.95rem;">${app.jobTitle||'Unknown Job'}</div>
+              <div style="font-size:0.8rem;color:var(--text2);margin-top:3px;">🏢 ${app.company||'—'} &nbsp;•&nbsp; 📅 Applied ${date}</div>
+              <div style="margin-top:6px;">${matchBadge}</div>
+            </div>
+            <span class="badge badge-${app.status}">${app.status}</span>
+          </div>
+          ${shortlistBanner}${acceptedBanner}${feedbackHtml}
+        </div>`;
+      }).join('');
+    }
+
+    loadSkills(); loadApps();
+  </script>
+</body>
+</html>

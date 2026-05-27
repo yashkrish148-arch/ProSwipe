@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProSwipe — Discover</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/pages/swipe.html" class="navbar-brand">
+      <div class="brand-mark">👔</div>
+      <span class="brand-name">ProSwipe</span>
+    </a>
+    <div class="navbar-links">
+      <a href="/pages/swipe.html" class="active">Discover</a>
+      <a href="/pages/dashboard.html">Dashboard</a>
+      <a href="/pages/skills.html">Skill Tests</a>
+      <a href="/pages/resume.html">Resume</a>
+    </div>
+    <div class="navbar-right">
+      <div class="nav-user-chip">
+        <div class="nav-avatar" id="navAvatar">J</div>
+        <span class="nav-username" id="navUser"></span>
+      </div>
+      <button class="btn-nav-logout" onclick="logout()">Sign out</button>
+    </div>
+  </nav>
+
+  <div class="swipe-page">
+    <div class="swipe-header">
+      <h2>Discover Opportunities</h2>
+      <p>Jobs ranked by your skill match — swipe right to apply, left to pass</p>
+    </div>
+    <div class="kbd-hints">
+      <div class="kbd-hint"><span class="kbd">←</span> Pass</div>
+      <div class="kbd-hint"><span class="kbd">→</span> Apply</div>
+      <div class="kbd-hint"><span class="kbd">Z</span> Undo</div>
+      <div class="kbd-hint"><span class="kbd">I</span> Details</div>
+    </div>
+
+    <div class="card-stack" id="cardStack">
+      <div class="card-back card-back-2"></div>
+      <div class="card-back"></div>
+      <div class="loading-center" style="position:absolute;inset:0;z-index:2;">
+        <div class="spinner"></div>
+      </div>
+    </div>
+
+    <div class="swipe-actions">
+      <button class="swipe-btn swipe-btn-skip" onclick="swipeCard('skip')" title="Pass (←)">✕</button>
+      <button class="swipe-btn swipe-btn-undo" onclick="undoSwipe()" title="Undo (Z)">↩</button>
+      <button class="swipe-btn swipe-btn-apply" onclick="swipeCard('apply')" title="Apply (→)">♥</button>
+      <button class="swipe-btn swipe-btn-info" onclick="showDetails()" title="Details (I)">ℹ</button>
+    </div>
+
+    <div class="swipe-counter">
+      <div class="counter-item">
+        <div class="counter-num c-green" id="countApplied">0</div>
+        <div class="counter-label">Applied</div>
+      </div>
+      <div class="counter-item">
+        <div class="counter-num c-blue" id="countRemaining">0</div>
+        <div class="counter-label">Remaining</div>
+      </div>
+      <div class="counter-item">
+        <div class="counter-num c-red" id="countSkipped">0</div>
+        <div class="counter-label">Passed</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DETAILS MODAL -->
+  <div class="modal-overlay" id="detailsModal">
+    <div class="modal" style="width:580px;">
+      <div class="modal-title" id="detailTitle">Job Details</div>
+      <div id="detailContent"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeDetails()">Close</button>
+        <button class="btn btn-danger" onclick="closeDetails();swipeCard('skip')">✕ Pass</button>
+        <button class="btn btn-success" onclick="closeDetails();swipeCard('apply')">♥ Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    const BASE = 'http://localhost:8080';
+    const userId = localStorage.getItem('userId');
+    const userName = localStorage.getItem('userName');
+    const userRole = localStorage.getItem('userRole');
+    if (!userId) { location.href = '/index.html'; }
+    if (userRole === 'recruiter') { location.href = '/pages/admin.html'; }
+
+    document.getElementById('navUser').textContent = userName;
+    document.getElementById('navAvatar').textContent = (userName||'U')[0].toUpperCase();
+
+    // Company logo emojis map
+    const companyEmojis = ['🏢','🚀','💡','🌐','⚡','🔮','💎','🎯','🛠','🌟'];
+    function getCompanyEmoji(name) {
+      let h = 0; for (let c of (name||'')) h = (h*31 + c.charCodeAt(0)) % companyEmojis.length;
+      return companyEmojis[h];
+    }
+    function getCompanyColor(name) {
+      const colors = ['#4F6EF7','#F7674F','#2DD4BF','#A855F7','#F59E0B','#10B981','#EC4899','#6366F1'];
+      let h = 0; for (let c of (name||'')) h = (h*31 + c.charCodeAt(0)) % colors.length;
+      return colors[h];
+    }
+
+    let jobs=[], idx=0, history=[], applied=0, skipped=0;
+    let isDragging=false, startX=0, startY=0, curX=0, activeCard=null;
+
+    function logout() { localStorage.clear(); location.href='/index.html'; }
+    function toast(msg,type='') {
+      const tc=document.getElementById('toastContainer');
+      const t=document.createElement('div'); t.className=`toast ${type}`;
+      t.innerHTML=`<span>${type==='success'?'✅':type==='error'?'❌':'ℹ️'}</span> ${msg}`;
+      tc.appendChild(t); setTimeout(()=>t.remove(),3000);
+    }
+
+    async function loadJobs() {
+      try {
+        const r = await fetch(`${BASE}/api/jobs/recommended/${userId}`);
+        jobs = await r.json();
+        idx=0; updateCounters(); renderCard();
+      } catch(e) { toast('Failed to load jobs','error'); }
+    }
+
+    function chipify(skills) {
+      if (!skills) return '<span style="color:var(--text3);font-size:0.8rem;">None listed</span>';
+      return skills.split(',').map(s=>s.trim()).filter(Boolean).map(s=>`<span class="card-skill-tag">${s}</span>`).join('');
+    }
+
+    function renderCard() {
+      const stack = document.getElementById('cardStack');
+      if (idx >= jobs.length) {
+        stack.innerHTML=`
+          <div class="card-back card-back-2"></div><div class="card-back"></div>
+          <div style="position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:32px;text-align:center;">
+            <div style="font-size:3.5rem;">🎉</div>
+            <div style="font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;color:var(--text);">You're all caught up!</div>
+            <p style="color:var(--text2);font-size:0.9rem;max-width:260px;">No more jobs in your queue. Check your dashboard for updates.</p>
+            <a href="/pages/dashboard.html" class="btn btn-primary" style="margin-top:8px;">View Dashboard →</a>
+          </div>`;
+        return;
+      }
+      const job = jobs[idx];
+      const score = job.matchScore || 0;
+      const mc = score>=70?'high':score>=40?'mid':'low';
+      const emoji = getCompanyEmoji(job.company);
+      const color = getCompanyColor(job.company);
+      const deadline = job.deadline ? `<div class="card-pill">📅 ${new Date(job.deadline).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</div>` : '';
+
+      stack.innerHTML=`
+        <div class="card-back card-back-2"></div><div class="card-back"></div>
+        <div class="job-card top-card" id="topCard">
+          <div class="swipe-tint right" id="tintR"></div>
+          <div class="swipe-tint left" id="tintL"></div>
+          <div class="swipe-label apply" id="lApply">APPLY ♥</div>
+          <div class="swipe-label skip" id="lSkip">PASS ✕</div>
+
+          <div class="card-header">
+            <div class="card-header-bg" style="background:linear-gradient(135deg,${color}22 0%,#0f1220 100%);"></div>
+            <div class="card-header-pattern"></div>
+            <div class="card-match-badge">
+              <div class="match-dot ${mc}"></div> ${score}% match
+            </div>
+            <div class="company-logo-wrap" style="border-color:${color}44;">${emoji}</div>
+          </div>
+
+          <div class="card-body">
+            <div class="card-company">${job.company}</div>
+            <div class="card-title-text">${job.title}</div>
+            <div class="card-pills">
+              <div class="card-pill">📍 ${job.location||'Not specified'}</div>
+              <div class="card-pill">💰 ${job.salaryRange||'Not disclosed'}</div>
+              ${deadline}
+            </div>
+            <p class="card-desc">${job.description||'No description provided.'}</p>
+            <div class="card-skills-row">
+              <div class="card-skills-label">Required Skills</div>
+              <div>${chipify(job.requiredSkills)}</div>
+            </div>
+            <div class="match-bar-row">
+              <div class="match-bar-top">
+                <span>Skill Match</span>
+                <span>${score}%</span>
+              </div>
+              <div class="match-bar-bg">
+                <div class="match-bar-fill ${mc}" style="width:${score}%"></div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      attachDrag(); updateCounters();
+    }
+
+    function updateCounters() {
+      document.getElementById('countApplied').textContent = applied;
+      document.getElementById('countSkipped').textContent = skipped;
+      document.getElementById('countRemaining').textContent = Math.max(0, jobs.length-idx);
+    }
+
+    function attachDrag() {
+      const card = document.getElementById('topCard');
+      if (!card) return; activeCard = card;
+      card.addEventListener('mousedown', ds);
+      card.addEventListener('touchstart', e=>ds(e.touches[0]), {passive:true});
+      document.addEventListener('mousemove', dm);
+      document.addEventListener('touchmove', e=>dm(e.touches[0]), {passive:true});
+      document.addEventListener('mouseup', de);
+      document.addEventListener('touchend', de);
+    }
+
+    function ds(e) { isDragging=true; startX=e.clientX; startY=e.clientY; activeCard?.classList.add('dragging'); }
+    function dm(e) {
+      if (!isDragging||!activeCard) return;
+      curX=e.clientX-startX; const cY=e.clientY-startY;
+      activeCard.style.transform=`translate(${curX}px,${cY}px) rotate(${curX*0.07}deg)`;
+      const tR=document.getElementById('tintR'), tL=document.getElementById('tintL');
+      const lA=document.getElementById('lApply'), lS=document.getElementById('lSkip');
+      const th=60;
+      if (curX>th) { tR.style.opacity=Math.min(curX/220,.5); tL.style.opacity=0; lA.style.opacity=Math.min((curX-th)/90,1); lS.style.opacity=0; }
+      else if (curX<-th) { tL.style.opacity=Math.min(-curX/220,.5); tR.style.opacity=0; lS.style.opacity=Math.min((-curX-th)/90,1); lA.style.opacity=0; }
+      else { tR.style.opacity=0; tL.style.opacity=0; lA.style.opacity=0; lS.style.opacity=0; }
+    }
+    function de() {
+      if (!isDragging||!activeCard) return;
+      isDragging=false; activeCard.classList.remove('dragging');
+      if (curX>110) animateOut('right');
+      else if (curX<-110) animateOut('left');
+      else { activeCard.style.transition='transform 0.35s cubic-bezier(0.34,1.56,0.64,1)'; activeCard.style.transform=''; setTimeout(()=>{if(activeCard)activeCard.style.transition='';},350); }
+      curX=0;
+    }
+    function animateOut(dir) {
+      if (!activeCard) return;
+      const x = dir==='right' ? window.innerWidth+300 : -(window.innerWidth+300);
+      activeCard.style.transition='transform 0.45s ease,opacity 0.45s ease';
+      activeCard.style.transform=`translate(${x}px,${dir==='right'?-30:30}px) rotate(${dir==='right'?35:-35}deg)`;
+      activeCard.style.opacity='0';
+      setTimeout(()=>recordSwipe(dir==='right'?'like':'skip'), 400);
+    }
+    function swipeCard(action) { if (idx>=jobs.length) return; animateOut(action==='apply'?'right':'left'); }
+    async function recordSwipe(action) {
+      const job=jobs[idx]; history.push({job,action});
+      if(action==='like') applied++; else skipped++;
+      idx++; renderCard();
+      try {
+        await fetch(`${BASE}/api/applications/swipe`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({seekerId:userId,jobId:job.id,action})});
+        if(action==='like') toast(`Applied to ${job.title}!`,'success'); else toast(`Passed on ${job.title}`);
+      } catch(e) {}
+    }
+    function undoSwipe() {
+      if (!history.length) { toast('Nothing to undo'); return; }
+      const last=history.pop(); idx--;
+      if(last.action==='like') applied--; else skipped--;
+      renderCard(); toast('Last swipe undone');
+    }
+    function showDetails() {
+      if (idx>=jobs.length) return;
+      const job=jobs[idx]; const emoji=getCompanyEmoji(job.company);
+      document.getElementById('detailTitle').textContent=job.title;
+      document.getElementById('detailContent').innerHTML=`
+        <div style="display:flex;align-items:center;gap:14px;padding:16px;background:var(--surface2);border-radius:var(--radius-xs);margin-bottom:20px;">
+          <div style="width:52px;height:52px;border-radius:12px;background:var(--surface3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.6rem;">${emoji}</div>
+          <div>
+            <div style="font-weight:700;color:var(--text);">${job.company}</div>
+            <div style="font-size:0.82rem;color:var(--text2);">📍 ${job.location||'N/A'} &nbsp;•&nbsp; 💰 ${job.salaryRange||'N/A'}</div>
+          </div>
+        </div>
+        <div style="font-size:0.88rem;color:var(--text2);line-height:1.7;margin-bottom:16px;">${job.description||''}</div>
+        <div style="font-size:0.75rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Required Skills</div>
+        <div class="skill-chips">${(job.requiredSkills||'').split(',').map(s=>`<span class="chip">${s.trim()}</span>`).join('')}</div>
+        ${job.deadline?`<div style="margin-top:14px;font-size:0.85rem;color:var(--text2);">📅 Application deadline: <strong>${new Date(job.deadline).toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})}</strong></div>`:''}`;
+      document.getElementById('detailsModal').classList.add('active');
+    }
+    function closeDetails() { document.getElementById('detailsModal').classList.remove('active'); }
+
+    document.addEventListener('keydown', e => {
+      if (document.getElementById('detailsModal').classList.contains('active')) { if(e.key==='Escape') closeDetails(); return; }
+      if(e.key==='ArrowRight') swipeCard('apply');
+      else if(e.key==='ArrowLeft') swipeCard('skip');
+      else if(e.key==='z'||e.key==='Z') undoSwipe();
+      else if(e.key==='i'||e.key==='I') showDetails();
+    });
+
+    loadJobs();
+  </script>
+</body>
+</html>

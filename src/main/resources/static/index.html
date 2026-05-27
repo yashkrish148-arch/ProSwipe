@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProSwipe — Sign In</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .floating-cards {
+      position: absolute; right: -20px; bottom: 80px;
+      display: flex; flex-direction: column; gap: 12px;
+      opacity: 0.6;
+    }
+    .mini-card {
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 12px; padding: 12px 16px; width: 220px;
+      animation: floatCard 4s ease-in-out infinite;
+    }
+    .mini-card:nth-child(2) { animation-delay: 1.5s; transform: translateX(20px); }
+    .mini-card:nth-child(3) { animation-delay: 3s; transform: translateX(-10px); }
+    @keyframes floatCard {
+      0%,100% { transform: translateY(0); }
+      50%      { transform: translateY(-8px); }
+    }
+    .mini-card:nth-child(2) { animation: floatCard2 4s ease-in-out 1.5s infinite; }
+    .mini-card:nth-child(3) { animation: floatCard3 4s ease-in-out 3s infinite; }
+    @keyframes floatCard2 { 0%,100% { transform: translateX(20px) translateY(0); } 50% { transform: translateX(20px) translateY(-10px); } }
+    @keyframes floatCard3 { 0%,100% { transform: translateX(-10px) translateY(0); } 50% { transform: translateX(-10px) translateY(-6px); } }
+    .mc-company { font-size: 0.7rem; color: var(--text3); margin-bottom: 2px; }
+    .mc-title { font-size: 0.8rem; font-weight: 700; color: var(--text); }
+    .mc-match { font-size: 0.68rem; color: var(--green); font-weight: 600; margin-top: 4px; }
+    .glow-orb {
+      position: absolute; border-radius: 50%; filter: blur(80px); pointer-events: none;
+    }
+    .orb1 { width: 300px; height: 300px; background: rgba(79,110,247,0.15); top: 10%; left: -100px; }
+    .orb2 { width: 200px; height: 200px; background: rgba(247,103,79,0.1); bottom: 20%; right: 0; }
+    .steps-preview { margin-top: 40px; }
+    .step-preview-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .step-preview-item:last-child { border-bottom: none; }
+    .step-num { width: 28px; height: 28px; border-radius: 8px; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; color: var(--primary); flex-shrink: 0; }
+    .step-desc { font-size: 0.82rem; color: var(--text2); }
+  </style>
+</head>
+<body>
+  <div class="auth-page">
+    <!-- LEFT PANEL -->
+    <div class="auth-left">
+      <div class="glow-orb orb1"></div>
+      <div class="glow-orb orb2"></div>
+      <div class="auth-left-bg"></div>
+      <div class="auth-left-content">
+        <div class="auth-logo-big">
+          <div class="mark">👔</div>
+          <div class="name">ProSwipe</div>
+        </div>
+        <div class="auth-tagline">
+          Your Dream Job,<br><span>One Swipe Away</span>
+        </div>
+        <p class="auth-desc">
+          The smartest way to job hunt. Swipe right on opportunities that match your skills, get real recruiter feedback, and track every application in one place.
+        </p>
+        <div class="auth-features">
+          <div class="auth-feature">
+            <div class="feat-icon-wrap">🎯</div>
+            <div class="feat-text">AI-powered skill match scoring on every card</div>
+          </div>
+          <div class="auth-feature">
+            <div class="feat-icon-wrap">🧪</div>
+            <div class="feat-text">Verified skill badges via MCQ assessments</div>
+          </div>
+          <div class="auth-feature">
+            <div class="feat-icon-wrap">💬</div>
+            <div class="feat-text">Constructive feedback from recruiters on rejection</div>
+          </div>
+          <div class="auth-feature">
+            <div class="feat-icon-wrap">📊</div>
+            <div class="feat-text">Real-time application tracking dashboard</div>
+          </div>
+        </div>
+        <div class="floating-cards">
+          <div class="mini-card">
+            <div class="mc-company">Google · Remote</div>
+            <div class="mc-title">Senior Backend Engineer</div>
+            <div class="mc-match">⚡ 94% skill match</div>
+          </div>
+          <div class="mini-card">
+            <div class="mc-company">Razorpay · Bangalore</div>
+            <div class="mc-title">Full Stack Developer</div>
+            <div class="mc-match">⚡ 87% skill match</div>
+          </div>
+          <div class="mini-card">
+            <div class="mc-company">Zomato · Gurgaon</div>
+            <div class="mc-title">Java Developer</div>
+            <div class="mc-match">⚡ 78% skill match</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="auth-right">
+      <div class="auth-form-wrap">
+        <div class="auth-form-title" id="formTitle">Welcome back</div>
+        <p class="auth-form-sub" id="formSub">Sign in to continue your job search</p>
+
+        <div class="auth-tabs">
+          <div class="auth-tab active" onclick="switchTab('login')">Sign In</div>
+          <div class="auth-tab" onclick="switchTab('register')">Create Account</div>
+        </div>
+
+        <!-- LOGIN FORM -->
+        <div class="auth-form active" id="loginForm">
+          <div class="form-group">
+            <label class="form-label">Email address</label>
+            <input type="email" class="form-control" id="loginEmail" placeholder="you@example.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <div class="input-wrap">
+              <input type="password" class="form-control has-eye" id="loginPassword" placeholder="Enter your password">
+              <button class="eye-toggle" type="button" onclick="toggleEye('loginPassword', this)">👁</button>
+            </div>
+          </div>
+          <div id="loginError" class="form-error" style="margin-bottom:14px;"></div>
+          <button class="btn btn-primary btn-lg" style="width:100%;justify-content:center;" onclick="login()" id="loginBtn">
+            Sign In →
+          </button>
+        </div>
+
+        <!-- REGISTER FORM -->
+        <div class="auth-form" id="registerForm">
+          <div class="form-group">
+            <label class="form-label">I am a</label>
+            <div class="role-grid">
+              <div class="role-card selected" id="roleSeeker" onclick="selectRole('seeker')">
+                <div class="role-card-icon">🔍</div>
+                <div class="role-card-label">Job Seeker</div>
+              </div>
+              <div class="role-card" id="roleRecruiter" onclick="selectRole('recruiter')">
+                <div class="role-card-icon">🏢</div>
+                <div class="role-card-label">Recruiter</div>
+              </div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <input type="text" class="form-control" id="regName" placeholder="John Doe">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email address</label>
+              <input type="email" class="form-control" id="regEmail" placeholder="you@example.com">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password <span style="color:var(--text3);font-weight:400;">(min 8 characters)</span></label>
+            <div class="input-wrap">
+              <input type="password" class="form-control has-eye" id="regPassword" placeholder="Create a strong password">
+              <button class="eye-toggle" type="button" onclick="toggleEye('regPassword', this)">👁</button>
+            </div>
+          </div>
+          <div class="form-group" id="skillsGroup">
+            <label class="form-label">Your Skills <span style="color:var(--text3);font-weight:400;">(comma separated)</span></label>
+            <input type="text" class="form-control" id="regSkills" placeholder="Java, Spring Boot, MySQL, React…">
+          </div>
+          <div class="form-group" id="companyGroup" style="display:none;">
+            <label class="form-label">Company Name</label>
+            <input type="text" class="form-control" id="regCompany" placeholder="e.g. Infosys, Startup Inc.">
+          </div>
+          <div id="regError" class="form-error" style="margin-bottom:14px;"></div>
+          <button class="btn btn-primary btn-lg" style="width:100%;justify-content:center;" onclick="register()" id="regBtn">
+            Create Account →
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const BASE = 'http://localhost:8080';
+    let selectedRole = 'seeker';
+
+    if (localStorage.getItem('userId')) {
+      location.href = localStorage.getItem('userRole') === 'recruiter' ? '/pages/admin.html' : '/pages/swipe.html';
+    }
+
+    function toggleEye(inputId, btn) {
+      const input = document.getElementById(inputId);
+      if (input.type === 'password') { input.type = 'text'; btn.textContent = '🙈'; }
+      else { input.type = 'password'; btn.textContent = '👁'; }
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', tab==='login'?i===0:i===1));
+      document.getElementById('loginForm').classList.toggle('active', tab==='login');
+      document.getElementById('registerForm').classList.toggle('active', tab==='register');
+      document.getElementById('formTitle').textContent = tab==='login' ? 'Welcome back' : 'Create your account';
+      document.getElementById('formSub').textContent = tab==='login' ? 'Sign in to continue your job search' : 'Join thousands of professionals on ProSwipe';
+    }
+
+    function selectRole(role) {
+      selectedRole = role;
+      document.getElementById('roleSeeker').classList.toggle('selected', role==='seeker');
+      document.getElementById('roleRecruiter').classList.toggle('selected', role==='recruiter');
+      document.getElementById('skillsGroup').style.display = role==='seeker' ? 'block' : 'none';
+      document.getElementById('companyGroup').style.display = role==='recruiter' ? 'block' : 'none';
+    }
+
+    async function login() {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const errEl = document.getElementById('loginError');
+      errEl.textContent = '';
+      if (!email || !password) { errEl.textContent = 'Please fill in all fields.'; return; }
+      const btn = document.getElementById('loginBtn');
+      btn.disabled = true; btn.textContent = 'Signing in…';
+      try {
+        const res = await fetch(`${BASE}/api/auth/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,password}) });
+        const data = await res.json();
+        if (!res.ok) { errEl.textContent = data.error || 'Login failed'; return; }
+        saveUser(data); redirect(data.role);
+      } catch(e) { errEl.textContent = 'Cannot reach server. Make sure Spring Boot is running on port 8080.'; }
+      finally { btn.disabled = false; btn.textContent = 'Sign In →'; }
+    }
+
+    async function register() {
+      const name = document.getElementById('regName').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const password = document.getElementById('regPassword').value;
+      const skills = document.getElementById('regSkills').value.trim();
+      const company = document.getElementById('regCompany').value.trim();
+      const errEl = document.getElementById('regError');
+      errEl.textContent = '';
+      if (!name||!email||!password) { errEl.textContent = 'Name, email and password are required.'; return; }
+      if (password.length < 8) { errEl.textContent = 'Password must be at least 8 characters.'; return; }
+      const btn = document.getElementById('regBtn');
+      btn.disabled = true; btn.textContent = 'Creating account…';
+      try {
+        const res = await fetch(`${BASE}/api/auth/register`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name,email,password,role:selectedRole,skills,company}) });
+        const data = await res.json();
+        if (!res.ok) { errEl.textContent = data.error || 'Registration failed'; return; }
+        saveUser(data); redirect(data.role);
+      } catch(e) { errEl.textContent = 'Cannot reach server.'; }
+      finally { btn.disabled = false; btn.textContent = 'Create Account →'; }
+    }
+
+    function saveUser(u) {
+      ['userId','userName','userRole','userEmail','userSkills','userCompany','token'].forEach(k => localStorage.removeItem(k));
+      localStorage.setItem('userId', u.id);
+      localStorage.setItem('userName', u.name);
+      localStorage.setItem('userRole', u.role);
+      localStorage.setItem('userEmail', u.email);
+      localStorage.setItem('userSkills', u.skills || '');
+      localStorage.setItem('userCompany', u.company || '');
+      if (u.token) localStorage.setItem('token', u.token);
+    }
+    function redirect(role) { location.href = role==='recruiter' ? '/pages/admin.html' : '/pages/swipe.html'; }
+
+    document.addEventListener('keydown', e => { if (e.key==='Enter') { if (document.getElementById('loginForm').classList.contains('active')) login(); else register(); } });
+  </script>
+</body>
+</html>
